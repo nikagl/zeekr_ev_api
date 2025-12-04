@@ -1,0 +1,20 @@
+[project]
+name = "zeekr-ev-api"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Fry",email = "fryx0r@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pycryptodome (>=3.23.0,<4.0.0)",
+    "requests (>=2.32.5,<3.0.0)"
+]
+
+[tool.poetry]
+packages = [{include = "zeekr_ev_api", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
