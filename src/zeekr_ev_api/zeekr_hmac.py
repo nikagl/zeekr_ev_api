@@ -1,9 +1,15 @@
-import hashlib
-import hmac
 import base64
 import datetime
-from urllib.parse import urlparse
+import hashlib
+import hmac
+import logging
 from typing import Dict
+
+from urllib.parse import urlparse
+
+from requests import Request
+
+log = logging.getLogger(__name__)
 
 # EEEE, dd MMM yyyy HH:mm:ss 'GMT'
 DATE_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
@@ -21,7 +27,7 @@ def hmac_sha256_base64(data: str, key: str) -> str:
     return base64.b64encode(h.digest()).decode("utf-8")
 
 
-def get_canonical_path(path_segments: list) -> str:
+def get_canonical_path(path_segments: list[str]) -> str:
     """Combines path segments into a canonical path, returning '/' if empty."""
     if not path_segments:
         return "/"
@@ -64,7 +70,7 @@ def get_canonical_query_string(query_map: Dict[str, str]) -> str:
     return "&".join(parts)
 
 
-def get_request_body_content(body: str) -> str:
+def get_request_body_content(body: str | bytes | None) -> str:
     """Reads the request body content as a UTF-8 string."""
     if body is None:
         return ""
@@ -78,13 +84,13 @@ def get_request_body_content(body: str) -> str:
         return ""
 
 
-def generateHMAC(request, access_key, secret_key):
+def generateHMAC(request: Request, access_key: str,
+                 secret_key: str) -> Request:
     parsed_url = urlparse(request.url)
     gmt_date = _get_gmt_date()
 
-    path_segments = (
-        parsed_url.path.strip("/").split("/") if parsed_url.path.strip("/") else []
-    )
+    path_segments = (parsed_url.path.strip("/").split("/")
+                     if parsed_url.path.strip("/") else [])
     canonical_path = get_canonical_path(path_segments)
 
     query_map = parse_query_params(parsed_url.query)
@@ -110,6 +116,6 @@ def generateHMAC(request, access_key, secret_key):
     request.headers["X-HMAC-DIGEST"] = body_digest
     request.headers["X-DATE"] = gmt_date
 
-    print(f"Request Headers: {request.headers}")
+    log.debug(f"Request Headers: {request.headers}")
 
     return request

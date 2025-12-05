@@ -2,17 +2,22 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import time
 import uuid
+
+from typing import List
+
+from urllib.parse import urlparse, parse_qs
 
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 
-from urllib.parse import urlparse, parse_qs
-from typing import List
 from requests import PreparedRequest  # For type hinting and structure
 
-ALLOWED_HEADERS: List[str] = [
+log = logging.getLogger(__name__)
+
+ALLOWED_HEADERS: list[str] = [
     "x-app-id",
     "content-type",
     "x-api-signature-nonce",
@@ -49,7 +54,9 @@ def aes_encrypt(plain_text: str, key_hex: str, iv_hex: str) -> str:
 
     # Create the AES cipher object in CBC mode
     # IV is passed as the `iv` parameter.
-    cipher = AES.new(key_hex.encode("utf-8"), AES.MODE_CBC, iv=iv_hex.encode("utf-8"))
+    cipher = AES.new(key_hex.encode("utf-8"),
+                     AES.MODE_CBC,
+                     iv=iv_hex.encode("utf-8"))
 
     # Apply PKCS7 Padding (PyCryptodome's `pad` function defaults to PKCS7,
     # which is equivalent to PKCS5 for AES's 16-byte block size).
@@ -64,6 +71,16 @@ def aes_encrypt(plain_text: str, key_hex: str, iv_hex: str) -> str:
 
 
 def validate_header(key: str, value: str) -> bool:
+    """
+    Validates if a given header should be included in the signature calculation.
+
+    Args:
+        key: The header key.
+        value: The header value.
+
+    Returns:
+        True if the header is valid, False otherwise.
+    """
     lower_key = key.lower()
 
     # 1. Check if key is allowed
@@ -75,27 +92,20 @@ def validate_header(key: str, value: str) -> bool:
         return bool(value)  # returns true if value is not empty
 
     # 3. Check authorization (must be non-empty)
-    # return !m0.g(lowerCase3, c0952s.authHeader) || str2.length() > 0;
-    # Python: return (lower_key != self.AUTH_HEADER) or bool(value)
     return (lower_key != AUTH_HEADER) or bool(value)
 
 
-def map_entry_to_dict_string(key: str, value: str, sb_list: List[str]):
+def map_entry_to_dict_string(key: str, value: str, sb_list: list[str]) -> None:
     """Builds the Header part of the signature string."""
     lower_key = key.lower()
     sb_list.append(f"{lower_key}:{value}\n")
 
 
-def map_entry_to_query_string(key: str, value: str, sb_list: List[str]):
+def map_entry_to_query_string(key: str, value: str,
+                              sb_list: list[str]) -> None:
     """Builds the Query part of the signature string."""
-    # The Java code has complex URL encoding logic, primarily replacing `*` with `%2A`.
-    # Standard urllib.parse.quote will handle this correctly for query parameters.
-    # Python's `requests` handles standard URL encoding for us when building the URL.
-    # Here, we only need to manually build the key=value&key=value string.
-
-    # The Java code replaces * with %2A, / with /, and ? with ? (likely fixing over-encoding)
-    # Simplified equivalent for the value:
-    encoded_value = value.replace("%2F", "/").replace("%3F", "?").replace("*", "%2A")
+    encoded_value = value.replace("%2F", "/").replace("%3F",
+                                                      "?").replace("*", "%2A")
 
     if sb_list:
         sb_list.append("&")
@@ -104,6 +114,7 @@ def map_entry_to_query_string(key: str, value: str, sb_list: List[str]):
 
 # --- Core Logic ---
 def calculate_sig(request: PreparedRequest, secret: str) -> str:
+    """ Calculates the signature for the given request using the provided secret. """
     # 1. Get request components
     method = request.method
     url_obj = urlparse(request.url)
@@ -111,11 +122,12 @@ def calculate_sig(request: PreparedRequest, secret: str) -> str:
 
     # 2. Build the Canonical Headers String
     # The headers must be filtered, sorted by key, and formatted as 'key:value\n'
-    canonical_headers = []
+    canonical_headers: List[str] = []
     if headers:
         # Filter and sort headers
         filtered_headers = sorted(
-            [(k.lower(), v) for k, v in headers.items() if validate_header(k, v)],
+            [(k.lower(), v)
+             for k, v in headers.items() if validate_header(k, v)],
             key=lambda item: item[0],
         )
 
@@ -126,10 +138,10 @@ def calculate_sig(request: PreparedRequest, secret: str) -> str:
 
     # 3. Build the Canonical Query String
     # Query parameters are extracted, sorted by key, and formatted as 'key=value&...'
-    canonical_query = []
+    canonical_query: list[str] = []
     if url_obj.query:
         # parse_qs returns a dict of lists; we need to flatten it, assume single values
-        query_params = parse_qs(url_obj.query, keep_blank_values=True)  # type: ignore
+        query_params = parse_qs(url_obj.query, keep_blank_values=True)
 
         # Sort keys and then flatten (assuming no multi-value parameters for simplicity)
         sorted_query_params = sorted(query_params.items())
@@ -137,7 +149,7 @@ def calculate_sig(request: PreparedRequest, secret: str) -> str:
         for key, values in sorted_query_params:
             # Assuming single value per key for simplicity
             value = values[0] if values else ""
-            map_entry_to_query_string(key, value, canonical_query)  # type: ignore
+            map_entry_to_query_string(key, value, canonical_query)
 
     query_string = "".join(canonical_query)
 
@@ -156,9 +168,9 @@ def calculate_sig(request: PreparedRequest, secret: str) -> str:
                 if isinstance(request_body, (str, bytes)):
                     body_data = json.loads(request_body)
                     # Canonicalize by dumping with sorted keys and no separators/indent
-                    canonical_json = json.dumps(
-                        body_data, sort_keys=True, separators=(",", ":")
-                    )
+                    canonical_json = json.dumps(body_data,
+                                                sort_keys=True,
+                                                separators=(",", ":"))
                 else:
                     # Fallback for unexpected body type
                     canonical_json = str(request_body)
@@ -188,16 +200,17 @@ def calculate_sig(request: PreparedRequest, secret: str) -> str:
         sig_base_list.append("\n")
 
     # Append HTTP Method + newline
-    sig_base_list.append(method.upper())  # type: ignore
+    assert method is not None
+    sig_base_list.append(method.upper())
     sig_base_list.append("\n")
 
     sig_base_list.append(url_obj.path.rstrip())
 
     signature_base_string = "".join(sig_base_list)
 
-    print("--- DEBUG: SIGNATURE BASE STRING ---")
-    print(signature_base_string)
-    print("-----------------------------------")
+    log.debug("--- DEBUG: SIGNATURE BASE STRING ---")
+    log.debug(signature_base_string)
+    log.debug("-----------------------------------")
 
     # 6. Calculate HMAC-SHA256
     h = hmac.new(
@@ -224,10 +237,8 @@ def sign_request(request: PreparedRequest, secret: str) -> PreparedRequest:
     if "X-SIGNATURE" in request.headers:
         del request.headers["X-SIGNATURE"]
 
-    if (
-        "x-api-signature-nonce" not in request.headers
-        or "X-API-SIGNATURE-NONCE" not in request.headers
-    ):
+    if ("x-api-signature-nonce" not in request.headers
+            or "X-API-SIGNATURE-NONCE" not in request.headers):
         request.headers["X-API-SIGNATURE-NONCE"] = str(uuid.uuid4())
     if "X-TIMESTAMP" not in request.headers or "x-timestamp" not in request.headers:
         request.headers["X-TIMESTAMP"] = str(time.time_ns() // 1000000)
@@ -236,6 +247,6 @@ def sign_request(request: PreparedRequest, secret: str) -> PreparedRequest:
     signature = calculate_sig(request, secret)
     request.headers["X-SIGNATURE"] = signature
 
-    print(f"Request Headers: {request.headers}")
+    log.debug("Request Headers: %s", {request.headers})
 
     return request
