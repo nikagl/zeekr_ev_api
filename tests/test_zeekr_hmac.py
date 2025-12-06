@@ -70,10 +70,10 @@ def test_generateHMAC(mocker):
     req = Request(
         "POST",
         "https://gateway-pub-hw-em-sg.zeekrlife.com/overseas-app/protocol/service/getProtocol",
-        data={"country": "AU"},
+        data='{"country":"AU"}',
     )
     access_key = "673ca869165e446eb5356b8b5ae26938"
-    secret_key = "890efe3207af95348b95f66b2ee7da04"
+    secret_key = "dhn8kcmr903f39ccdd9f458f893bb6fac5e16968"
 
     signed_req = zeekr_hmac.generateHMAC(req, access_key, secret_key)
 

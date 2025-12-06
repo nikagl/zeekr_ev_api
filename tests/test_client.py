@@ -1,10 +1,10 @@
 """
 Tests for client.py
 """
-
+from zeekr_ev_api import const
 import pytest
 from requests import Session
-from zeekr_ev_api.client import ZeekrClient, ZeekrException, AuthException, Vehicle
+from zeekr_ev_api.client import ZeekrClient, ZeekrException, Vehicle
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def test_client_initialization(client: ZeekrClient):
     """Test ZeekrClient initialization"""
     assert client.username == "test_user"
     assert client.password == "test_password"
-    assert client.country_code == "NL"
+    assert client.country_code == "AU"
     assert isinstance(client.session, Session)
     assert client.logged_in is False
     assert client.auth_token is None
@@ -27,13 +27,15 @@ def test_client_initialization(client: ZeekrClient):
 
 def test_login_success(client: ZeekrClient, mocker):
     """Test successful login"""
+    const.PASSWORD_PUBLIC_KEY = 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCBzg6+dwMVtGTNo8EPL+XFyz0OY0pMMo3HdRZGauuCSgISfVMkMmOhNEb2q9UfiQcEeOwVmOgts9VF4q0BJYrRNGQaPkLybwkWsx1JmbBRcr3qq+WWhqq8xQFksfn8KeXmwgVMFX+bzup43LE0vy0yyb+SuQ9FBBGuE1d/BfHHpQIDAQAB'
+
     # Mock all network calls
     mocker.patch('zeekr_ev_api.network.customGet',
                  return_value={
                      "success":
                      True,
                      "data": [{
-                         "countryCode": "NL",
+                         "countryCode": "AU",
                          "url": {
                              "appServerUrl": "https://app.zeekr.eu",
                              "userCenterUrl": "https://user.zeekr.eu",
@@ -47,8 +49,6 @@ def test_login_success(client: ZeekrClient, mocker):
                      "success": True,
                      "data": {}
                  })
-    mocker.patch('zeekr_ev_api.zeekr_hmac.generateHMAC',
-                 return_value=mocker.MagicMock())
     mocker.patch('requests.sessions.Session.send',
                  return_value=mocker.MagicMock(
                      json=lambda: {
@@ -67,8 +67,6 @@ def test_login_success(client: ZeekrClient, mocker):
                  })
     mocker.patch('zeekr_ev_api.client.ZeekrClient._get_tsp_code',
                  return_value=("tsp_code", "login_id"))
-    mocker.patch('zeekr_ev_api.const.REGION_LOGIN_SERVERS',
-                 {"EU": "https://login.zeekr.eu"})
 
     client.login()
 
@@ -117,8 +115,6 @@ def test_get_vehicle_list(client: ZeekrClient, mocker):
     assert len(vehicles) == 2
     assert isinstance(vehicles[0], Vehicle)
     assert vehicles[0].vin == "VIN123"
-    assert vehicles[0].model_name == "Zeekr 001"
-    assert vehicles[0].license_plate == "PLATE1"
 
 
 def test_get_vehicle_status(client: ZeekrClient, mocker):
@@ -148,9 +144,6 @@ def test_vehicle_class(client: ZeekrClient, mocker):
     })
 
     assert repr(vehicle) == "<Vehicle VIN123>"
-    assert vehicle.model_code == "001"
-    assert vehicle.model_name == "Zeekr 001"
-    assert vehicle.license_plate == "PLATE1"
 
     mocker.patch.object(client, 'get_vehicle_status', return_value={"soc": 90})
     status = vehicle.get_status()

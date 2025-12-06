@@ -247,6 +247,6 @@ def sign_request(request: PreparedRequest, secret: str) -> PreparedRequest:
     signature = calculate_sig(request, secret)
     request.headers["X-SIGNATURE"] = signature
 
-    log.debug("Request Headers: %s", {request.headers})
+    log.debug(f"Request Headers: {request.headers}")
 
     return request
