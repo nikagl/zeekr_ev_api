@@ -4,6 +4,7 @@ Zeekr EV API Client
 
 import base64
 import json
+import logging
 from typing import Any
 
 import requests
@@ -38,12 +39,16 @@ class ZeekrClient:
         vin_key: str = "",
         vin_iv: str = "",
         session_data: dict | None = None,
+        logger: logging.Logger | None = None,
     ) -> None:
         """
         Initializes the client.
         """
         self.session: requests.Session = requests.Session()
         self.password: str | None = password
+
+        # Logger for this client (allows caller to inject their logger)
+        self.logger = logger or logging.getLogger(__name__)
 
         # Store secrets on instance instead of mutating global const
         self.hmac_access_key = hmac_access_key or const.HMAC_ACCESS_KEY

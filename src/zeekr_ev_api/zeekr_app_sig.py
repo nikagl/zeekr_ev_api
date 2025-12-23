@@ -54,9 +54,7 @@ def aes_encrypt(plain_text: str, key_hex: str, iv_hex: str) -> str:
 
     # Create the AES cipher object in CBC mode
     # IV is passed as the `iv` parameter.
-    cipher = AES.new(key_hex.encode("utf-8"),
-                     AES.MODE_CBC,
-                     iv=iv_hex.encode("utf-8"))
+    cipher = AES.new(key_hex.encode("utf-8"), AES.MODE_CBC, iv=iv_hex.encode("utf-8"))
 
     # Apply PKCS7 Padding (PyCryptodome's `pad` function defaults to PKCS7,
     # which is equivalent to PKCS5 for AES's 16-byte block size).
@@ -101,11 +99,9 @@ def map_entry_to_dict_string(key: str, value: str, sb_list: list[str]) -> None:
     sb_list.append(f"{lower_key}:{value}\n")
 
 
-def map_entry_to_query_string(key: str, value: str,
-                              sb_list: list[str]) -> None:
+def map_entry_to_query_string(key: str, value: str, sb_list: list[str]) -> None:
     """Builds the Query part of the signature string."""
-    encoded_value = value.replace("%2F", "/").replace("%3F",
-                                                      "?").replace("*", "%2A")
+    encoded_value = value.replace("%2F", "/").replace("%3F", "?").replace("*", "%2A")
 
     if sb_list:
         sb_list.append("&")
@@ -114,7 +110,7 @@ def map_entry_to_query_string(key: str, value: str,
 
 # --- Core Logic ---
 def calculate_sig(request: PreparedRequest, secret: str) -> str:
-    """ Calculates the signature for the given request using the provided secret. """
+    """Calculates the signature for the given request using the provided secret."""
     # 1. Get request components
     method = request.method
     url_obj = urlparse(request.url)
@@ -126,8 +122,7 @@ def calculate_sig(request: PreparedRequest, secret: str) -> str:
     if headers:
         # Filter and sort headers
         filtered_headers = sorted(
-            [(k.lower(), v)
-             for k, v in headers.items() if validate_header(k, v)],
+            [(k.lower(), v) for k, v in headers.items() if validate_header(k, v)],
             key=lambda item: item[0],
         )
 
@@ -168,9 +163,9 @@ def calculate_sig(request: PreparedRequest, secret: str) -> str:
                 if isinstance(request_body, (str, bytes)):
                     body_data = json.loads(request_body)
                     # Canonicalize by dumping with sorted keys and no separators/indent
-                    canonical_json = json.dumps(body_data,
-                                                sort_keys=True,
-                                                separators=(",", ":"))
+                    canonical_json = json.dumps(
+                        body_data, sort_keys=True, separators=(",", ":")
+                    )
                 else:
                     # Fallback for unexpected body type
                     canonical_json = str(request_body)
@@ -237,8 +232,10 @@ def sign_request(request: PreparedRequest, secret: str) -> PreparedRequest:
     if "X-SIGNATURE" in request.headers:
         del request.headers["X-SIGNATURE"]
 
-    if ("x-api-signature-nonce" not in request.headers
-            or "X-API-SIGNATURE-NONCE" not in request.headers):
+    if (
+        "x-api-signature-nonce" not in request.headers
+        or "X-API-SIGNATURE-NONCE" not in request.headers
+    ):
         request.headers["X-API-SIGNATURE-NONCE"] = str(uuid.uuid4())
     if "X-TIMESTAMP" not in request.headers or "x-timestamp" not in request.headers:
         request.headers["X-TIMESTAMP"] = str(time.time_ns() // 1000000)
