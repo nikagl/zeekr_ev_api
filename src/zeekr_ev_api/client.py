@@ -457,3 +457,23 @@ class Vehicle:
         Fetches the vehicle status.
         """
         return self._client.get_vehicle_status(self.vin)
+
+    def get_charging_status(self) -> Any:
+        """
+        Fetches the vehicle charging status.
+        """
+        return self._client.get_vehicle_charging_status(self.vin)
+
+    def get_remote_control_state(self) -> Any:
+        """
+        Fetches the vehicle remote control state.
+        """
+        return self._client.get_vehicle_state(self.vin)
+
+    def do_remote_control(
+        self, command: str, serviceID: str, setting: Dict[str, Any]
+    ) -> bool:
+        """
+        Performs a remote control action on the vehicle.
+        """
+        return self._client.do_remote_control(self.vin, command, serviceID, setting)
