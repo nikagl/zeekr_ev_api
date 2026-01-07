@@ -174,7 +174,7 @@ class ZeekrClient:
 
         if not found:
             eu_lookup = network.customGet(
-                self, const.EU_REGION_URL_HOST
+                self, f"{const.EU_APP_SERVER_HOST}{const.URL_URL}"
             )
             eu_has_country = False
             if eu_lookup.get("success", False):

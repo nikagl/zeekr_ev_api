@@ -9,7 +9,6 @@ MESSAGE_HOST = "https://gateway-pub-hw-em-sg.zeekrlife.com/sea-message-core/"
 EU_APP_SERVER_HOST = "https://gateway-pub-azure.zeekr.eu/overseas-app/"
 EU_USERCENTER_HOST = "https://gateway-pub-azure.zeekr.eu/zeekr-cuc-idaas/"
 EU_MESSAGE_HOST = "https://gateway-pub-azure.zeekr.eu/eu-message-core/"
-EU_REGION_URL_HOST = "https://gateway-pub-azure.zeekr.eu/overseas-app/region/url"
 
 # URLs
 LOGIN_URL = "auth/loginByEmailEncrypt"
