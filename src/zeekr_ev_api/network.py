@@ -24,7 +24,9 @@ def _safe_json(resp, logger) -> Any:
 def customPost(client: "ZeekrClient", url: str, body: dict | None = None) -> Any:
     """Sends a signed POST request with HMAC authentication."""
     logger = getattr(client, "logger", log)
+
     req = Request("POST", url, headers=const.DEFAULT_HEADERS, json=body)
+    logger.debug(f"[Zeekr API] Request: POST {url}")
     req = zeekr_hmac.generateHMAC(req, client.hmac_access_key, client.hmac_secret_key)
 
     prepped = client.session.prepare_request(req)
@@ -40,7 +42,9 @@ def customPost(client: "ZeekrClient", url: str, body: dict | None = None) -> Any
 def customGet(client: "ZeekrClient", url: str) -> Any:
     """Sends a signed GET request with HMAC authentication."""
     logger = getattr(client, "logger", log)
+
     req = Request("GET", url, headers=const.DEFAULT_HEADERS)
+    logger.debug(f"[Zeekr API] Request: GET {url}")
     req = zeekr_hmac.generateHMAC(req, client.hmac_access_key, client.hmac_secret_key)
 
     prepped = client.session.prepare_request(req)
@@ -61,7 +65,9 @@ def appSignedPost(
 ) -> Any:
     """Sends a signed POST request with an app signature."""
     logger = getattr(client, "logger", log)
+
     req = Request("POST", url, headers=const.LOGGED_IN_HEADERS, data=body)
+    logger.debug(f"[Zeekr API] Request: POST {url}")
     if extra_headers:
         req.headers.update(extra_headers)
     prepped = client.session.prepare_request(req)
@@ -93,7 +99,9 @@ def appSignedGet(client: "ZeekrClient", url: str, headers: dict | None = None) -
     if not const.LOGGED_IN_HEADERS["authorization"]:
         const.LOGGED_IN_HEADERS["authorization"] = client.bearer_token
     logger = getattr(client, "logger", log)
+
     req = Request("GET", url, headers=const.LOGGED_IN_HEADERS)
+    logger.debug(f"[Zeekr API] Request: GET {url}")
     if headers:
         req.headers.update(headers)
     prepped = client.session.prepare_request(req)
