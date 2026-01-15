@@ -84,3 +84,4 @@ LOGGED_IN_HEADERS = {
     "X-PLATFORM": "APP",
     "X-PROJECT-ID": "ZEEKR_SEA",
 }
+CHARGING_LIMIT_URL = "ms-charge-manage/api/v1.0/charge/getLatestSoc"
