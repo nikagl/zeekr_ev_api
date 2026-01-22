@@ -5,6 +5,7 @@ Zeekr EV API Client
 import base64
 import json
 import logging
+import threading
 from typing import Any, Dict
 
 import requests
@@ -12,14 +13,7 @@ from Crypto.Cipher import PKCS1_v1_5
 from Crypto.PublicKey import RSA
 
 from . import const, network, zeekr_app_sig, zeekr_hmac
-
-
-class ZeekrException(Exception):
-    """Base exception for the library."""
-
-
-class AuthException(ZeekrException):
-    """Exception for authentication errors."""
+from .exceptions import AuthException, ZeekrException
 
 
 class ZeekrClient:
@@ -49,6 +43,9 @@ class ZeekrClient:
 
         # Logger for this client (allows caller to inject their logger)
         self.logger = logger or logging.getLogger(__name__)
+
+        # Lock for authentication updates
+        self.auth_lock = threading.Lock()
 
         # Store secrets on instance instead of mutating global const
         self.hmac_access_key = hmac_access_key or const.HMAC_ACCESS_KEY
