@@ -22,6 +22,21 @@ def _safe_json(resp, logger) -> Any:
         return {"success": False, "error": f"Invalid JSON response: {e}", "status_code": resp.status_code}
 
 
+def _refresh_token(client: "ZeekrClient", expired_token: str) -> None:
+    """Refreshes the token if it matches the expired one."""
+    logger = getattr(client, "logger", log)
+    logger.info("Token expired. Attempting refresh...")
+    with client.auth_lock:
+        if client.bearer_token == expired_token:
+            try:
+                client.login(relogin=True)
+            except Exception as e:
+                logger.error("Token refresh failed: %s", e)
+                raise AuthException(f"Token refresh failed: {e}") from e
+        else:
+            logger.info("Token already refreshed by another thread. Retrying...")
+
+
 def customPost(client: "ZeekrClient", url: str, body: dict | None = None) -> Any:
     """Sends a signed POST request with HMAC authentication."""
     logger = getattr(client, "logger", log)
@@ -63,6 +78,7 @@ def appSignedPost(
     url: str,
     body: str | None = None,
     extra_headers: dict | None = None,
+    allow_retry: bool = True,
 ) -> Any:
     """Sends a signed POST request with an app signature."""
     logger = getattr(client, "logger", log)
@@ -93,41 +109,21 @@ def appSignedPost(
 
     # Check for token expiration
     if result.get("msg") == "Token expired":
-        logger.info("Token expired. Attempting refresh...")
-        failed_token = client.bearer_token
-
-        with client.auth_lock:
-            # If the token hasn't changed, perform relogin
-            if client.bearer_token == failed_token:
-                try:
-                    client.login(relogin=True)
-                except Exception as e:
-                    logger.error("Token refresh failed: %s", e)
-                    raise AuthException(f"Token refresh failed: {e}") from e
-            else:
-                logger.info("Token already refreshed by another thread. Retrying...")
-
-        # Update headers with new token
-        const.LOGGED_IN_HEADERS["authorization"] = client.bearer_token
-        req.headers["authorization"] = client.bearer_token
-
-        # Re-sign the request
-        prepped = client.session.prepare_request(req)
-        final = zeekr_app_sig.sign_request(prepped, client.prod_secret)
-
-        resp = client.session.send(final)
-        logger.debug("------ RETRY RESPONSE ------")
-        logger.debug(resp.text)
-        result = _safe_json(resp, logger)
-
-        # If it fails again, raise AuthException
-        if result.get("msg") == "Token expired":
+        if allow_retry:
+            _refresh_token(client, client.bearer_token)
+            return appSignedPost(client, url, body, extra_headers, allow_retry=False)
+        else:
             raise AuthException("Token expired (retry failed)")
 
     return result
 
 
-def appSignedGet(client: "ZeekrClient", url: str, headers: dict | None = None) -> Any:
+def appSignedGet(
+    client: "ZeekrClient",
+    url: str,
+    headers: dict | None = None,
+    allow_retry: bool = True,
+) -> Any:
     """Sends a signed GET request with an app signature."""
     if not client.bearer_token:
         raise Exception("Client is not logged in.")
@@ -152,35 +148,10 @@ def appSignedGet(client: "ZeekrClient", url: str, headers: dict | None = None) -
 
     # Check for token expiration
     if result.get("msg") == "Token expired":
-        logger.info("Token expired. Attempting refresh...")
-        failed_token = client.bearer_token
-
-        with client.auth_lock:
-            # If the token hasn't changed, perform relogin
-            if client.bearer_token == failed_token:
-                try:
-                    client.login(relogin=True)
-                except Exception as e:
-                    logger.error("Token refresh failed: %s", e)
-                    raise AuthException(f"Token refresh failed: {e}") from e
-            else:
-                logger.info("Token already refreshed by another thread. Retrying...")
-
-        # Update headers with new token
-        const.LOGGED_IN_HEADERS["authorization"] = client.bearer_token
-        req.headers["authorization"] = client.bearer_token
-
-        # Re-sign the request
-        prepped = client.session.prepare_request(req)
-        final = zeekr_app_sig.sign_request(prepped, client.prod_secret)
-
-        resp = client.session.send(final)
-        logger.debug("------ RETRY RESPONSE ------")
-        logger.debug(resp.text)
-        result = _safe_json(resp, logger)
-
-        # If it fails again, raise AuthException
-        if result.get("msg") == "Token expired":
+        if allow_retry:
+            _refresh_token(client, client.bearer_token)
+            return appSignedGet(client, url, headers, allow_retry=False)
+        else:
             raise AuthException("Token expired (retry failed)")
 
     return result
