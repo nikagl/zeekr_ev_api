@@ -83,7 +83,7 @@ def appSignedPost(
     """Sends a signed POST request with an app signature."""
     logger = getattr(client, "logger", log)
 
-    req = Request("POST", url, headers=const.LOGGED_IN_HEADERS, data=body)
+    req = Request("POST", url, headers=client.logged_in_headers, data=body)
     logger.debug(f"[Zeekr API] Request: POST {url}")
     if extra_headers:
         req.headers.update(extra_headers)
@@ -127,11 +127,11 @@ def appSignedGet(
     """Sends a signed GET request with an app signature."""
     if not client.bearer_token:
         raise Exception("Client is not logged in.")
-    if not const.LOGGED_IN_HEADERS["authorization"]:
-        const.LOGGED_IN_HEADERS["authorization"] = client.bearer_token
+    if not client.logged_in_headers["authorization"]:
+        client.logged_in_headers["authorization"] = client.bearer_token
     logger = getattr(client, "logger", log)
 
-    req = Request("GET", url, headers=const.LOGGED_IN_HEADERS)
+    req = Request("GET", url, headers=client.logged_in_headers)
     logger.debug(f"[Zeekr API] Request: GET {url}")
     if headers:
         req.headers.update(headers)
