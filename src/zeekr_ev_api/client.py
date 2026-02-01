@@ -220,7 +220,7 @@ class ZeekrClient:
         self.region_login_server = const.REGION_LOGIN_SERVERS.get(self.region_code)
         if not self.region_login_server:
             raise ZeekrException(f"No login server for region: {self.region_code}")
-        
+
         # Update headers for region-specific project ID
         if self.region_code == "EU":
             self.logged_in_headers["X-PROJECT-ID"] = "ZEEKR_EU"
