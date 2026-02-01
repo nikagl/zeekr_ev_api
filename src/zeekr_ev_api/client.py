@@ -518,9 +518,8 @@ class ZeekrClient:
         if not self.logged_in:
             raise ZeekrException("Not logged in")
 
-        encrypted_vin = zeekr_app_sig.aes_encrypt(vin, self.vin_key, self.vin_iv)
-        headers = const.LOGGED_IN_HEADERS.copy()
-        headers["X-VIN"] = encrypted_vin
+        headers = self.logged_in_headers.copy()
+        headers["X-VIN"] = self._get_encrypted_vin(vin)
 
         resp = network.appSignedGet(
             self,
@@ -539,10 +538,7 @@ class ZeekrClient:
         if not self.logged_in:
             raise ZeekrException("Not logged in")
 
-        extra_headers = {}
-        extra_headers["X-VIN"] = zeekr_app_sig.aes_encrypt(
-            vin, self.vin_key, self.vin_iv
-        )
+        extra_headers = {"X-VIN": self._get_encrypted_vin(vin)}
 
         resp = network.appSignedPost(
             self,
@@ -559,9 +555,8 @@ class ZeekrClient:
         if not self.logged_in:
             raise ZeekrException("Not logged in")
 
-        encrypted_vin = zeekr_app_sig.aes_encrypt(vin, self.vin_key, self.vin_iv)
-        headers = const.LOGGED_IN_HEADERS.copy()
-        headers["X-VIN"] = encrypted_vin
+        headers = self.logged_in_headers.copy()
+        headers["X-VIN"] = self._get_encrypted_vin(vin)
 
         resp = network.appSignedGet(
             self,
@@ -580,10 +575,7 @@ class ZeekrClient:
         if not self.logged_in:
             raise ZeekrException("Not logged in")
 
-        extra_headers = {}
-        extra_headers["X-VIN"] = zeekr_app_sig.aes_encrypt(
-            vin, self.vin_key, self.vin_iv
-        )
+        extra_headers = {"X-VIN": self._get_encrypted_vin(vin)}
 
         resp = network.appSignedPost(
             self,
