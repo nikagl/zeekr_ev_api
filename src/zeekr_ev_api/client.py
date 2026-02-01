@@ -510,6 +510,90 @@ class ZeekrClient:
         return vehicle_charging_limit_block.get("data", {})
 
 
+
+    def get_travel_plan(self, vin: str) -> Dict[str, Any]:
+        """
+        Fetches the latest travel plan.
+        """
+        if not self.logged_in:
+            raise ZeekrException("Not logged in")
+
+        encrypted_vin = zeekr_app_sig.aes_encrypt(vin, self.vin_key, self.vin_iv)
+        headers = const.LOGGED_IN_HEADERS.copy()
+        headers["X-VIN"] = encrypted_vin
+
+        resp = network.appSignedGet(
+            self,
+            f"{self.region_login_server}{const.LATEST_TRAVEL_PLAN_URL}",
+            headers=headers,
+        )
+        if not resp.get("success", False):
+            raise ZeekrException(f"Failed to get travel plan: {resp}")
+
+        return resp.get("data", {})
+
+    def set_travel_plan(self, vin: str, payload: dict) -> bool:
+        """
+        Sets the travel plan.
+        """
+        if not self.logged_in:
+            raise ZeekrException("Not logged in")
+
+        extra_headers = {}
+        extra_headers["X-VIN"] = zeekr_app_sig.aes_encrypt(
+            vin, self.vin_key, self.vin_iv
+        )
+
+        resp = network.appSignedPost(
+            self,
+            f"{self.region_login_server}{const.SET_TRAVEL_PLAN_URL}",
+            json.dumps(payload, separators=(",", ":")),
+            extra_headers=extra_headers,
+        )
+        return resp.get("success", False)
+
+    def get_charging_plan(self, vin: str) -> Dict[str, Any]:
+        """
+        Fetches the charging plan.
+        """
+        if not self.logged_in:
+            raise ZeekrException("Not logged in")
+
+        encrypted_vin = zeekr_app_sig.aes_encrypt(vin, self.vin_key, self.vin_iv)
+        headers = const.LOGGED_IN_HEADERS.copy()
+        headers["X-VIN"] = encrypted_vin
+
+        resp = network.appSignedGet(
+            self,
+            f"{self.region_login_server}{const.CHARGING_PLAN_URL}",
+            headers=headers,
+        )
+        if not resp.get("success", False):
+            raise ZeekrException(f"Failed to get charging plan: {resp}")
+
+        return resp.get("data", {})
+
+    def set_charging_plan(self, vin: str, payload: dict) -> bool:
+        """
+        Sets the charging plan.
+        """
+        if not self.logged_in:
+            raise ZeekrException("Not logged in")
+
+        extra_headers = {}
+        extra_headers["X-VIN"] = zeekr_app_sig.aes_encrypt(
+            vin, self.vin_key, self.vin_iv
+        )
+
+        resp = network.appSignedPost(
+            self,
+            f"{self.region_login_server}{const.SET_CHARGING_PLAN_URL}",
+            json.dumps(payload, separators=(",", ":")),
+            extra_headers=extra_headers,
+        )
+        return resp.get("success", False)
+
+
 class Vehicle:
     """
     Represents a Zeekr vehicle.
@@ -554,3 +638,27 @@ class Vehicle:
         Fetches the vehicle charging limit.
         """
         return self._client.get_vehicle_charging_limit(self.vin)
+
+    def get_travel_plan(self) -> Any:
+        """
+        Fetches the vehicle travel plan.
+        """
+        return self._client.get_travel_plan(self.vin)
+
+    def set_travel_plan(self, payload: dict) -> bool:
+        """
+        Sets the vehicle travel plan.
+        """
+        return self._client.set_travel_plan(self.vin, payload)
+
+    def get_charging_plan(self) -> Any:
+        """
+        Fetches the vehicle charging plan.
+        """
+        return self._client.get_charging_plan(self.vin)
+
+    def set_charging_plan(self, payload: dict) -> bool:
+        """
+        Sets the vehicle charging plan.
+        """
+        return self._client.set_charging_plan(self.vin, payload)
